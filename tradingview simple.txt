@@ -1,0 +1,77 @@
+//@version=6
+strategy("Estrategia TradingView Bot - Bitget", overlay=true, initial_capital=30, default_qty_type=strategy.percent_of_equity, default_qty_value=10)
+
+// Filtro de sesión: solo opera entre las 08:00 y las 23:00 (la función time() devuelve un valor no nulo solo en este rango)
+inSession = not na(time(timeframe.period, "0430-1930"))
+
+// ────── INPUTS CONFIGURABLES ──────
+// Puedes modificar estos parámetros según tus necesidades
+vwmaPeriod        = input.int(22, title="Periodo VWMA", minval=1)
+hmaPeriod         = input.int(74, title="Periodo HMA", minval=1)
+emaPeriod         = input.int(122, title="Periodo EMA", minval=1)
+atrPeriod         = input.int(17, title="Periodo ATR", minval=1)
+atrStopMultiplier = input.float(0.71, title="Multiplicador ATR para Stop", step=0.1)
+
+// ────── CÁLCULOS DE INDICADORES ──────
+// VWMA: Media ponderada por volumen
+vwma_val = ta.sma(close * volume, vwmaPeriod) / ta.sma(volume, vwmaPeriod)
+
+// Función para calcular el HMA (Hull Moving Average)
+f_hma(src, length) =>
+    halfLength = math.round(length / 2)
+    sqrtLength = math.round(math.sqrt(length))
+    wma1 = ta.wma(src, halfLength)
+    wma2 = ta.wma(src, length)
+    rawHMA = 2 * wma1 - wma2
+    ta.wma(rawHMA, sqrtLength)
+
+hma_val = f_hma(close, hmaPeriod)
+
+// EMA: Media exponencial
+ema_val = ta.ema(close, emaPeriod)
+
+// ATR: Rango verdadero promedio
+atr_val = ta.atr(atrPeriod)
+
+// ────── CONDICIONES DE LA ESTRATEGIA ──────
+// Señal de entrada LONG: precio > VWMA, VWMA > HMA y HMA > EMA
+open_long  = (close > vwma_val) and (close > hma_val) //and (hma_val > ema_val)
+// Señal de entrada SHORT: precio < VWMA, VWMA < HMA y HMA < EMA
+open_short = (close < vwma_val) and (close < hma_val) //and (hma_val < ema_val)
+
+// Señales de cierre (Stop Loss):
+// Para posición LONG: cierra si el precio cae por debajo de (HMA - atrStopMultiplier * ATR)
+close_long  = (close < (hma_val - atrStopMultiplier * atr_val))
+// Para posición SHORT: cierra si el precio sube por encima de (HMA + atrStopMultiplier * ATR)
+close_short = (close > (hma_val + atrStopMultiplier * atr_val))
+
+// Determina si ya existe posición abierta
+inLong  = strategy.position_size > 0
+inShort = strategy.position_size < 0
+
+// ────── EJECUCIÓN DE ORDENES Y ALERTAS ──────
+if inSession
+    // Entrada LONG
+    if (open_long and not inLong and not inShort)
+        strategy.entry("Long", strategy.long)
+        alert("{\"action\": \"open_long\"}", alert.freq_once_per_bar_close)
+
+    // Entrada SHORT
+    if (open_short and not inLong and not inShort)
+        strategy.entry("Short", strategy.short)
+        alert("{\"action\": \"open_short\"}", alert.freq_once_per_bar_close)
+
+    // Cierre de posición LONG
+    if (inLong and close_long)
+        strategy.close("Long")
+        alert("{\"action\": \"close_long\"}", alert.freq_once_per_bar_close)
+
+    // Cierre de posición SHORT
+    if (inShort and close_short)
+        strategy.close("Short")
+        alert("{\"action\": \"close_short\"}", alert.freq_once_per_bar_close)
+
+// ────── PLOTEO DE INDICADORES PARA VISUALIZACIÓN ──────
+plot(vwma_val, color=color.orange, title="VWMA")
+plot(hma_val, color=color.blue, title="HMA")
+plot(ema_val, color=color.red, title="EMA")

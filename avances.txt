@@ -1,0 +1,60 @@
+12/2/2025
+solucionado problema de importaciones de librerias al actualizar R
+el bot conecta al exchange
+devuelve precios segun el par y el timeframe seleccionados
+calcula la ema y las velas tipo heikin ashi
+imprime en terminal los datos de las ultimas 5 velas de las 50 que descarga para calcular la ema 
+queda pendiente introducir cambios para que te pida apalancamiento y cantidad de moneda para operar, asi como introducir la estrategia por ahora
+13/2/2025
+se añadio la funcion de apalancamiento asi como la cantidad de usdt a usar por operacion. 
+para el apalancamiento hubo que definir llamadas independientes lon y short
+
+se añadio la funciond e seleccionar el saldo por operacion ya sea con cifra fija o porcentaje de bank total
+se añadio la funcion para que el size de la posicion sea en usdt y no en contratos
+se añadio la estrategia
+14/2/2025
+aparecen errores al ejecutar la estrategia ya que parece que al obtener los datos de las columnas de precios de cada vela, parece dar varios errores
+para simplificar el codigo que cancelo el calculo de velas heikin y se usan normales
+la estrategia pasa a ser con una ema 200 y zlsma 25
+
+Abrir LONG si:
+precio > EMA200 > ZLsMA25
+
+Cerrar LONG si:
+precio < ZLsMA25
+
+Abrir SHORT si:
+precio < EMA200 < ZLsMA25
+
+Cerrar SHORT si:
+precio > ZLsMA25
+
+
+
+falta por averiguar por que al  introducir la cantidad de la operacion, me devuelve error. parece que por lo que me dice gpt en el texto chino parece que 
+significa que la posicion es demasiado pequeña para hacer la operacion. todavia queda mirar si esta puesto el saldo como str y haya que convertirlo a float
+
+18/2/2025
+
+se soluciono el problema que habia
+funciona bien
+se implemento un trailing stop para las posiciones abiertas en base al pnl de la posicion
+se implemento otro trailing stop para el saldo total y asi evitar en la medida de lo posible que las perdidas del dia superen a las ganancias
+se modifico la estrategia para que ahora funcione mejor ya que solo comparaba valores de precio con las medias y ahora compara medias y precio
+
+
+
+
+19/2/2025
+hay que intentar que no se quede sin velas para calcular indicadores ya que al arrancar el bot las coge pero a veces no obtiene las suficientes 
+
+
+20/2/2025
+
+Nuevas funciones para los indicadores:
+compute_hma(…, period=10) para la Hull Moving Average.
+compute_vwma(…) para la Volume Weighted Moving Average de 50 períodos.
+LONG si HMA(10) > VWMA(50) y close > HMA(10),
+Cerrar LONG si close < VWMA(50),
+SHORT si HMA(10) < VWMA(50) y close < HMA(10),
+Cerrar SHORT si close > VWMA(50).
